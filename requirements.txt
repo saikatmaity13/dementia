@@ -9,4 +9,5 @@ lime
 openai-whisper
 torch
 graphviz
+nltk
 joblib
