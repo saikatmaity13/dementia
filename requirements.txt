@@ -13,3 +13,4 @@ nltk
 joblib
 seaborn
 plotly
+transformers
