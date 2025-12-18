@@ -11,3 +11,4 @@ torch
 graphviz
 nltk
 joblib
+seaborn
