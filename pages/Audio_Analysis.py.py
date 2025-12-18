@@ -63,6 +63,7 @@ def setup_nltk():
     except LookupError:
         nltk.download('stopwords')
         nltk.download('punkt')
+        nltk.download('punkt_tab')
         nltk.download('wordnet')
     return set(stopwords.words('english')), WordNetLemmatizer()
 
@@ -567,4 +568,5 @@ with tab4:
                     fig_sim.add_trace(go.Scatter(x=[speech_rate], y=[risk], mode='markers', marker=dict(color='blue', size=12, symbol='x'), name='Current Value'))
                     fig_sim.update_layout(height=300, margin=dict(l=20,r=20,t=20,b=20), xaxis_title="Speech Rate", yaxis_title="Risk Probability")
                     st.plotly_chart(fig_sim, use_container_width=True)
+
 
