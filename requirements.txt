@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+scikit-learn
+matplotlib
+librosa
+shap
+lime
+openai-whisper
+torch
+graphviz
+joblib
