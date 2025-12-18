@@ -12,3 +12,4 @@ graphviz
 nltk
 joblib
 seaborn
+plotly
