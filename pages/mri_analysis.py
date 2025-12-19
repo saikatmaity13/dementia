@@ -4,35 +4,31 @@ import numpy as np
 from PIL import Image, ImageOps
 import os
 import random
-import matplotlib.pyplot as plt
 
 # --- CONFIGURATION ---
-DATA_DIR = 'reference_images' 
+DATA_DIR = 'reference_images'
 CLASSIFIER_PATH = 'models/dementia_classifier.h5'
-GENERATOR_PATH = 'models/dementia_generator.h5'  # <--- Path to Generator
+GENERATOR_PATH = 'models/dementia_generator.h5'
 IMG_SIZE = (128, 128)
+# CLASS NAMES MUST MATCH TRAINING ORDER EXACTLY
 CLASS_NAMES = ['MildDemented', 'ModerateDemented', 'NonDemented', 'VeryMildDemented']
-LATENT_DIM = 100  # Standard noise dimension for GANs (Change if you used different dim)
+LATENT_DIM = 100
 
 # --- LOAD MODELS ---
 @st.cache_resource
 def load_models():
     models = {}
-    
-    # Load Classifier
     if os.path.exists(CLASSIFIER_PATH):
         models['classifier'] = tf.keras.models.load_model(CLASSIFIER_PATH)
     else:
         st.error(f"⚠️ Classifier not found at {CLASSIFIER_PATH}")
         models['classifier'] = None
 
-    # Load Generator
     if os.path.exists(GENERATOR_PATH):
         models['generator'] = tf.keras.models.load_model(GENERATOR_PATH)
     else:
-        st.warning(f"⚠️ Generator not found at {GENERATOR_PATH}. Synthetic image feature will be disabled.")
+        st.warning(f"⚠️ Generator not found at {GENERATOR_PATH}")
         models['generator'] = None
-        
     return models
 
 models = load_models()
@@ -49,28 +45,30 @@ def preprocess_image(image):
     img_array = img_array / 255.0
     return img_array
 
-def generate_synthetic_image():
-    """Generates an image using the loaded GAN model"""
+# --- FIXED GENERATOR FUNCTION ---
+def generate_synthetic_image(class_index):
+    """Generates an image using Noise + Class Label"""
     if generator is None:
         return None
     
-    # 1. Create random noise (Latent Vector)
+    # 1. Create Random Noise
     noise = tf.random.normal([1, LATENT_DIM])
     
-    # 2. Generate Image
-    generated_image = generator(noise, training=False)
+    # 2. Create Label Input (The specific class we want)
+    label = tf.constant([[class_index]])  # Shape (1, 1)
     
-    # 3. Denormalize (Scale from [-1, 1] to [0, 1] usually)
-    # Adjust this math depending on how you trained your GAN!
+    # 3. Generate Image (Pass BOTH inputs as a list)
+    generated_image = generator([noise, label], training=False)
+    
+    # 4. Denormalize
+    # Assuming output is [-1, 1] -> [0, 255]
     generated_image = (generated_image[0, :, :, 0] * 127.5 + 127.5).numpy().astype(np.uint8)
     
     return generated_image
 
 # --- PAGE LAYOUT ---
 st.header("🧠 MRI Analysis & Generation")
-
-# TABS for different modes
-tab1, tab2 = st.tabs(["🕵️ Diagnosis (Classifier)", "🧪 Synthetic Data (GAN)"])
+tab1, tab2 = st.tabs(["🕵️ Diagnosis", "🧪 Synthetic Data (GAN)"])
 
 # --- TAB 1: DIAGNOSIS ---
 with tab1:
@@ -90,23 +88,28 @@ with tab1:
                 confidence = 100 * np.max(score)
             
             st.success(f"Diagnosis: **{predicted_class}**")
-            st.progress(int(confidence))
             st.caption(f"Confidence: {confidence:.2f}%")
 
-# --- TAB 2: GAN GENERATION ---
+# --- TAB 2: GAN GENERATION (UPDATED) ---
 with tab2:
     st.subheader("Generate Synthetic MRI Samples")
-    st.write("Use the Generative Adversarial Network (GAN) to create synthetic brain scans for research.")
+    st.write("Use the Conditional GAN to generate brain scans for a specific dementia stage.")
     
     if generator is not None:
-        if st.button("✨ Generate New Brain Scan"):
-            with st.spinner("Generating pixel data from noise..."):
-                syn_img = generate_synthetic_image()
+        # User selects the class they want to generate
+        selected_class = st.selectbox("Select Condition to Generate:", CLASS_NAMES)
+        
+        if st.button(f"✨ Generate {selected_class} Scan"):
+            # Get the index (0, 1, 2, or 3)
+            class_idx = CLASS_NAMES.index(selected_class)
+            
+            with st.spinner(f"Generating synthetic {selected_class} MRI..."):
+                syn_img = generate_synthetic_image(class_idx)
                 
                 if syn_img is not None:
-                    st.image(syn_img, caption="AI-Generated Synthetic MRI", width=300)
+                    st.image(syn_img, caption=f"Synthetic {selected_class} MRI", width=300)
                     st.success("Image generated successfully!")
                 else:
                     st.error("Error generating image.")
     else:
-        st.warning("Generator model not loaded. Please upload 'dementia_generator.h5' to the models folder.")
+        st.warning("Generator model not loaded.")
