@@ -14,3 +14,6 @@ joblib
 seaborn
 plotly
 transformers
+tensorflow
+opencv-python-headless
+Pillow
